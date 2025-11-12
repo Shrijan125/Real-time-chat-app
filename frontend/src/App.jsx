@@ -26,7 +26,6 @@ export default function App() {
     scrollToBottom();
   }, [messages]);
 
-  // Load user from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('chatAppUser');
     if (savedUser) {
@@ -36,7 +35,6 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
-      // Save user to localStorage
       localStorage.setItem('chatAppUser', currentUser);
       
       const websocket = new WebSocket(`${WS_URL}/ws/${currentUser}`);
@@ -49,9 +47,7 @@ export default function App() {
             u.username === data.username ? { ...u, online: data.online } : u
           ));
         } else {
-          // Only add message to state if it's relevant to currently selected user
           setMessages(prev => {
-            // Check if message is between currentUser and the sender/recipient
             const isRelevant = 
               (data.from === currentUser || data.to === currentUser);
             
@@ -73,7 +69,6 @@ export default function App() {
 
   useEffect(() => {
     if (selectedUser) {
-      // Clear message input when switching users
       setNewMessage('');
       fetchMessages(selectedUser.username);
     }
@@ -182,7 +177,6 @@ export default function App() {
     downloadLink.click();
   };
 
-  // Filter messages to only show conversation with selected user
   const filteredMessages = messages.filter(msg => 
     selectedUser && (
       (msg.from === currentUser && msg.to === selectedUser.username) ||

@@ -20,13 +20,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database connection pool
 db_pool = None
 
-# Active WebSocket connections
 active_connections: Dict[str, WebSocket] = {}
 
-# Database configuration
 DATABASE_URL="postgresql://myuser:mypassword@localhost:5433/mydb"
 
 class UserSignup(BaseModel):
@@ -50,7 +47,6 @@ async def startup():
     global db_pool
     db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=5, max_size=20)
     
-    # Create tables if they don't exist
     async with db_pool.acquire() as conn:
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -89,7 +85,6 @@ async def shutdown():
 @app.post("/signup")
 async def signup(user: UserSignup):
     async with db_pool.acquire() as conn:
-        # Check if user exists
         print(len(user.password.encode('utf-8')))
         print(user.username)
         existing = await conn.fetchrow(
@@ -100,7 +95,6 @@ async def signup(user: UserSignup):
         if existing:
             raise HTTPException(status_code=400, detail="User already exists")
         
-        # Hash password and create user
         await conn.execute(
             'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
             user.username, user.password
@@ -184,7 +178,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Notify all users about online status
     await broadcast_user_status(username, True)
     
     try:
@@ -192,7 +185,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             data = await websocket.receive_text()
             message_data = json.loads(data)
             
-            # Save message to database
             async with db_pool.acquire() as conn:
                 await conn.execute('''
                     INSERT INTO messages 
@@ -217,12 +209,10 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 "file_type": message_data.get("file_type")
             }
             
-            # Send to recipient if online
             recipient = message_data["to_user"]
             if recipient in active_connections:
                 await active_connections[recipient].send_text(json.dumps(msg))
             
-            # Send back to sender for confirmation
             await websocket.send_text(json.dumps(msg))
             
     except WebSocketDisconnect:
